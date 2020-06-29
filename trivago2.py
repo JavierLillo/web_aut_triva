@@ -32,11 +32,49 @@ def next_month(browser,wait):
     )
     browser.execute_script('arguments[0].click();', next_button)
 
+def multiple_room(browser,roomtype,children,child_age,adults,rooms):
+    browser.execute_script('arguments[0].click();',roomtype)
+    for j in range(int(rooms)):
+        for adult in adults:
+            adults_input = browser.find_element_by_id('select-num-adults-2')
+            #browser.execute_script('arguments[0].click();',adults_input)
+            adults_input.send_keys(adult)
+
+        for child in children:
+
+            if int(child) > 0:
+                children_input = browser.find_element_by_id('select-num-children-2')
+                children_input.send_keys(child)
+                sleep(0.5)
+                ### TODO: PONER EDAD MENORES DE EDAD
+                i = 0
+                children_ages = browser.find_elements_by_class_name('js-select-child-age')
+                for ages in children_ages:
+                    ages_room = child_age[j]
+                    
+                    ages.send_keys(ages_room[i])
+                    i += 1
+    ok_button = browser.find_element_by_class_name('confirm')
+    browser.execute_script('arguments[0].click();', ok_button)
 
 
 
 roomtype_selection = input("Que tipo de habitación desea: ")
-children = input("Ingrese el numero de menores de edad: ")
+if roomtype_selection == 'Familiar' or roomtype_selection ==  'Múltiple':
+    rooms = input('Ingrese el numero de habitaciones: ')
+    children = [] #numero de niños en cada pieza
+    child_age = [] #Las edades de los niños de las piezas
+    adults = []
+    for i in range(int(rooms)):
+        adults.append(input('Ingrese el numero de mayores de edad en la habitación: '))
+        children.append(input("Ingrese el numero de menores de edad en la habitación: "))
+        if int(children[i]) > 0:
+            childroom_age = []
+            for j in range(int(children[i])):
+                 #Edades niños en una pieza
+                childroom_age.append(input(f'Ingrese edad del menor {j+1}: '))
+            child_age.append(childroom_age)
+        
 browser = config()
 browser.get('https://www.trivago.cl')
 
@@ -59,7 +97,6 @@ arrival_month = wait.until(
         (By.XPATH,"//*[@id='cal-heading-month']/span")
     )
 )
-
 
 while arrival_month.text != 'Octubre 2020':
     #boton que cambia de mes en el calendario
@@ -133,17 +170,11 @@ except TimeoutException as ex:
                 break
             elif roomtype.text == 'Familiar':
                 #introducir caso
-                browser.execute_script('arguments[0].click();',roomtype)
-                adults_input = browser.find_element_by_id('select-num-adults-2')
-                #browser.execute_script('arguments[0].click();',adults_input)
-                adults_input.send_keys('2')
-                if int(children) > 0:
-                    children_input = browser.find_element_by_id('select-num-children-2')
-                    children_input.send_keys(children)
-                    ### TODO: PONER EDAD MENORES DE EDAD
+                multiple_room(browser,roomtype,children,child_age,adults,rooms)
+                    
                 break
             elif roomtype.text == 'Múltiple':
-                ### TODO: PONER CASO 
+                multiple_room(browser,roomtype,children,child_age,adults,rooms)
                 break
     
     #search(browser)
