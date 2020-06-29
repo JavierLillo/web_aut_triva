@@ -98,7 +98,7 @@ try:
     adults_input.send_keys('4')
     sleep(0.5)
 
-#niños
+    #niños
     children_input = browser.find_element_by_id('children-input')
     children_input.send_keys(Keys.BACKSPACE)
     children_input.send_keys('3')
@@ -115,8 +115,10 @@ try:
     for i in range(0,childs):
         dropdown = Select(browser.find_element_by_id('child-{}'.format(i)))
         dropdown.select_by_value('4')
+    guest_button = browser.find_element_by_class_name('btn--apply-config')
+    browser.execute_script('arguments[0].click();', guest_button)
     sleep(0.5)
-    #search(browser)
+    search(browser)
 
 except TimeoutException as ex:
     #si pide tipo de habitación
@@ -137,7 +139,6 @@ except TimeoutException as ex:
                 adults_input.send_keys('2')
                 if int(children) > 0:
                     children_input = browser.find_element_by_id('select-num-children-2')
-                    #browser.execute_script('arguments[0].click();',children_input)
                     children_input.send_keys(children)
                     ### TODO: PONER EDAD MENORES DE EDAD
                 break
