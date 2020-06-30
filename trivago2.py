@@ -57,7 +57,9 @@ def multiple_room(browser,roomtype,children,child_age,adults,rooms):
     ok_button = browser.find_element_by_class_name('confirm')
     browser.execute_script('arguments[0].click();', ok_button)
 
-        
+
+
+##### HAY QUE HACER QUE SEA UN METODO, NO SE PQE FALLA 
 browser = config()
 browser.get('https://www.trivago.cl')
 place = input('Escriba el nombre de la ciudad de destino: ')
