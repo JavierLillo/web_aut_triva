@@ -32,51 +32,37 @@ def next_month(browser,wait):
     )
     browser.execute_script('arguments[0].click();', next_button)
 
+#configuracion para habitación familiar y 
 def multiple_room(browser,roomtype,children,child_age,adults,rooms):
     browser.execute_script('arguments[0].click();',roomtype)
-    for j in range(int(rooms)):
-        for adult in adults:
-            adults_input = browser.find_element_by_id('select-num-adults-2')
-            #browser.execute_script('arguments[0].click();',adults_input)
-            adults_input.send_keys(adult)
+    for i in range(int(rooms)-1):
+        add_room = browser.find_element_by_class_name('add_room')
+        browser.execute_script('arguments[0].click();',add_room) 
+    sleep(0.5)
 
-        for child in children:
+    for i in range(int(rooms)):
+        adults_input = browser.find_element_by_id('select-num-adults-{}'.format(i+2))
+        adults_input.send_keys(adults[i])
+        children_input = browser.find_element_by_id('select-num-children-{}'.format(i+2))
+        children_input.send_keys(children[i])
+        sleep(0.5)
+        children_ages = browser.find_elements_by_class_name('js-select-child-age')
+        
+        #SE AGREGAN LAS EDADES DE LOS MENORES DE EDAD
+        j = 0
+        for room_age in children_ages:
+            room_age.send_keys(child_age[j])
+            j += 1
 
-            if int(child) > 0:
-                children_input = browser.find_element_by_id('select-num-children-2')
-                children_input.send_keys(child)
-                sleep(0.5)
-                ### TODO: PONER EDAD MENORES DE EDAD
-                i = 0
-                children_ages = browser.find_elements_by_class_name('js-select-child-age')
-                for ages in children_ages:
-                    ages_room = child_age[j]
-                    
-                    ages.send_keys(ages_room[i])
-                    i += 1
     ok_button = browser.find_element_by_class_name('confirm')
     browser.execute_script('arguments[0].click();', ok_button)
 
-
-
-roomtype_selection = input("Que tipo de habitación desea: ")
-if roomtype_selection == 'Familiar' or roomtype_selection ==  'Múltiple':
-    rooms = input('Ingrese el numero de habitaciones: ')
-    children = [] #numero de niños en cada pieza
-    child_age = [] #Las edades de los niños de las piezas
-    adults = []
-    for i in range(int(rooms)):
-        adults.append(input('Ingrese el numero de mayores de edad en la habitación: '))
-        children.append(input("Ingrese el numero de menores de edad en la habitación: "))
-        if int(children[i]) > 0:
-            childroom_age = []
-            for j in range(int(children[i])):
-                 #Edades niños en una pieza
-                childroom_age.append(input(f'Ingrese edad del menor {j+1}: '))
-            child_age.append(childroom_age)
         
 browser = config()
 browser.get('https://www.trivago.cl')
+place = input('Escriba el nombre de la ciudad de destino: ')
+checkin_date = input('Escriba la fecha de llegada (YYYY-MM-DD): ')
+checkout_date = input('Escriba la fecha de salida (YYY-MM-DD):')
 
 #escribir la ciudad de destino
 wait = WebDriverWait(browser, 5)
@@ -85,7 +71,7 @@ place_input = wait.until(
         (By.ID, 'querytext')
     )
 )
-place_input.send_keys('Barcelona')
+place_input.send_keys(place)
 
 ## boton que abre el calendario
 checkin_button = browser.find_element_by_xpath("//button[@key = 'checkInButton']")
@@ -106,25 +92,62 @@ while arrival_month.text != 'Octubre 2020':
             (By.XPATH,"//*[@id='cal-heading-month']/span")
         )
     )
-    #browser.find_element_by_xpath("//*[@id='cal-heading-month']/span")
 
 arrival_dates = browser.find_elements_by_xpath("//*[@id='js-fullscreen-hero']/div[1]/form/div[4]/div[2]/div/table /tbody/tr/td/time")
 for date in arrival_dates:
-    if date.get_attribute('datetime') == '2020-10-15':
+    if date.get_attribute('datetime') == checkin_date:
         browser.execute_script('arguments[0].click();',date)
         break
 sleep(1)
 
 departure_dates = browser.find_elements_by_xpath("//*[@id='js-fullscreen-hero']/div[1]/form/div[4]/div[2]/div/table /tbody/tr/td/time")
 
-for departure_date in departure_dates:
-    if departure_date.get_attribute('datetime') == '2020-10-28':
-        browser.execute_script('arguments[0].click();',departure_date)
+for date in departure_dates:
+    if departure_date.get_attribute('datetime') == checkout_date:
+        browser.execute_script('arguments[0].click();',date)
         break
 
 
 #Casos dependiendo del boton para elegir habitaciones o huespedes
 try:
+    roomtype_selection = input("Que tipo de habitación desea: ")
+    # CASO EN QUE SE AGREGAN MÁS HABITACIONES
+    if roomtype_selection == 'Familiar' or roomtype_selection ==  'Múltiple':
+        rooms = input('Ingrese el numero de habitaciones: ')
+        children = [] #numero de niños en cada pieza
+        child_age = [] #Las edades de los niños de las piezas
+        adults = []
+        for i in range(int(rooms)):
+            adults.append(input('Ingrese el numero de mayores de edad en la habitación: '))
+            children.append(input("Ingrese el numero de menores de edad en la habitación: "))
+            if int(children[i]) > 0:
+                #childroom_age = []
+                for j in range(int(children[i])):
+                    #Edades niños en una pieza
+                    child_age.append(input(f'Ingrese edad del menor {j+1}: '))
+                #child_age.append(childroom_age)
+    #si pide tipo de habitación
+    roomtype_buttons = browser.find_elements_by_class_name('roomtype-btn')
+    for roomtype in roomtype_buttons:
+        if roomtype.text == roomtype_selection:
+            if roomtype.text == 'Individual':
+                browser.execute_script('arguments[0].click();',roomtype)
+                break
+            elif roomtype.text == 'Doble':
+                #Se viene en esta opción por defecto
+                break
+            elif roomtype.text == 'Familiar':
+                #introducir caso
+                multiple_room(browser,roomtype,children,child_age,adults,rooms)
+                    
+                break
+            elif roomtype.text == 'Múltiple':
+                multiple_room(browser,roomtype,children,child_age,adults,rooms)
+                break
+    
+    search(browser)
+
+except TimeoutException as ex:
     #si la interfaz pide numero de huespedes
     adults_input = wait.until(
         EC.presence_of_element_located(
@@ -156,25 +179,3 @@ try:
     browser.execute_script('arguments[0].click();', guest_button)
     sleep(0.5)
     search(browser)
-
-except TimeoutException as ex:
-    #si pide tipo de habitación
-    roomtype_buttons = browser.find_elements_by_class_name('roomtype-btn')
-    for roomtype in roomtype_buttons:
-        if roomtype.text == roomtype_selection:
-            if roomtype.text == 'Individual':
-                browser.execute_script('arguments[0].click();',roomtype)
-                break
-            elif roomtype.text == 'Doble':
-                #Se viene en esta opción por defecto
-                break
-            elif roomtype.text == 'Familiar':
-                #introducir caso
-                multiple_room(browser,roomtype,children,child_age,adults,rooms)
-                    
-                break
-            elif roomtype.text == 'Múltiple':
-                multiple_room(browser,roomtype,children,child_age,adults,rooms)
-                break
-    
-    #search(browser)
