@@ -103,7 +103,7 @@ sleep(1)
 departure_dates = browser.find_elements_by_xpath("//*[@id='js-fullscreen-hero']/div[1]/form/div[4]/div[2]/div/table /tbody/tr/td/time")
 
 for date in departure_dates:
-    if departure_date.get_attribute('datetime') == checkout_date:
+    if date.get_attribute('datetime') == checkout_date:
         browser.execute_script('arguments[0].click();',date)
         break
 
