@@ -6,14 +6,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from time import sleep
 from selenium.webdriver.support.select import Select
+from math import floor, ceil
 
 #apretar el boton para buscar
-def search(browser):
+def _search(browser):
     search_button = browser.find_element_by_xpath("//button[@data-qa='search-button']")
     browser.execute_script('arguments[0].click();',search_button)
 
 #las configuraciones que retornan el browser
-def config():
+def _config():
     driver_path = r'/usr/local/bin/chromedriver'
     browser_path = r'/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
     option = webdriver.ChromeOptions()
@@ -21,12 +22,13 @@ def config():
     option.binary_location = browser_path
     ## LUEGO DE COMPROBAR QUE FUNCIONE HABILITAR
     #option.add_argument('--headless')
+    #option.add_argument("--incognito");
     browser = webdriver.Chrome(executable_path = driver_path, options = option)
     browser.get('https://www.trivago.cl')
     return browser
 
 #boton para apretar siguiente mes en el calendario
-def next_month(browser,wait):
+def _next_month(browser,wait):
     next_button = wait.until(
         EC.presence_of_element_located(
             (By.CLASS_NAME,'cal-btn-next')
@@ -35,7 +37,7 @@ def next_month(browser,wait):
     browser.execute_script('arguments[0].click();', next_button)
 
 #configuracion para habitación familiar y 
-def multiple_room(browser,roomtype,children,child_age,adults,rooms):
+def _multiple_room(browser,roomtype,children,child_age,adults,rooms):
     browser.execute_script('arguments[0].click();',roomtype)
     for i in range(int(rooms)-1):
         add_room = browser.find_element_by_class_name('add_room')
@@ -59,7 +61,7 @@ def multiple_room(browser,roomtype,children,child_age,adults,rooms):
     ok_button = browser.find_element_by_class_name('confirm')
     browser.execute_script('arguments[0].click();', ok_button)
 
-def convert_month(checkin):
+def _convert_month(checkin):
     year = checkin[0:4]
     monthdict = {
         "Enero" : '01',
@@ -80,10 +82,9 @@ def convert_month(checkin):
     
 
 ##### Método
-def search_trivago(city, checkin, checkout, adults, children, babies):
+def search_trivago(city, checkin, checkout,rooms, adults, children, babies):
     
-    browser = config()
-    
+    browser = _config()
     #imagino que estos deberíamos estandarizarlo con el main de airbnb
     place = city
     checkin_date = checkin
@@ -110,10 +111,10 @@ def search_trivago(city, checkin, checkout, adults, children, babies):
     )
 
     #Transformar fecha a formato de calendario
-    month = convert_month(checkin)
+    month = _convert_month(checkin)
     while arrival_month.text != month:
         #boton que cambia de mes en el calendario
-        next_month(browser,wait)
+        _next_month(browser,wait)
         arrival_month = wait.until(
             EC.presence_of_element_located(
                 (By.XPATH,"//*[@id='cal-heading-month']/span")
@@ -137,42 +138,49 @@ def search_trivago(city, checkin, checkout, adults, children, babies):
 
     #Casos dependiendo del boton para elegir habitaciones o huespedes
     try:
-        roomtype_selection = input("Que tipo de habitación desea: ")
+        roomtype_selection = ''
+        if rooms == 1 and adults == 1:
+            roomtype_selection = 'Individual'
+        if rooms == 1 and adults == 2:
+            roomtype_selection = 'Doble'
         # CASO EN QUE SE AGREGAN MÁS HABITACIONES
-        if roomtype_selection == 'Familiar' or roomtype_selection ==  'Múltiple':
-            rooms = input('Ingrese el numero de habitaciones: ')
-            children = [] #numero de niños en cada pieza
+        if rooms > 1:
+            roomtype_selection = 'Familiar'
+        
+        if roomtype_selection == 'Familiar':
+            childrens = [] #numero de niños en cada pieza
             child_age = [] #Las edades de los niños de las piezas
-            adults = []
+            adult = []
             for i in range(int(rooms)):
-                adults.append(input('Ingrese el numero de mayores de edad en la habitación: '))
-                children.append(input("Ingrese el numero de menores de edad en la habitación: "))
-                if int(children[i]) > 0:
+                adult.append(ceil(adults/rooms))
+                print(adults/rooms)
+                childrens.append(floor((babies+children)/rooms))
+                if int(childrens[i]) > 0:
                     #childroom_age = []
-                    for j in range(int(children[i])):
+                    for j in range(int(childrens[i])):
                         #Edades niños en una pieza
-                        child_age.append(input(f'Ingrese edad del menor {j+1}: '))
+                        child_age.append('5')
                     #child_age.append(childroom_age)
         #si pide tipo de habitación
+            print (adult)
         roomtype_buttons = browser.find_elements_by_class_name('roomtype-btn')
         for roomtype in roomtype_buttons:
             if roomtype.text == roomtype_selection:
                 if roomtype.text == 'Individual':
                     browser.execute_script('arguments[0].click();',roomtype)
+                    sleep(2)
                     break
                 elif roomtype.text == 'Doble':
                     #Se viene en esta opción por defecto
                     break
                 elif roomtype.text == 'Familiar':
                     #introducir caso
-                    multiple_room(browser,roomtype,children,child_age,adults,rooms)
+                    _multiple_room(browser,roomtype,childrens,child_age,adult,rooms)
+                    sleep(2)
 
                     break
-                elif roomtype.text == 'Múltiple':
-                    multiple_room(browser,roomtype,children,child_age,adults,rooms)
-                    break
 
-        search(browser)
+        _search(browser)
 
     except TimeoutException as ex:
         #si la interfaz pide numero de huespedes
@@ -183,19 +191,19 @@ def search_trivago(city, checkin, checkout, adults, children, babies):
         )
         adults_input.send_keys(Keys.BACKSPACE)
         adults_input.send_keys('4')
-        sleep(0.5)
+        sleep(1)
 
         #niños
         children_input = browser.find_element_by_id('children-input')
         children_input.send_keys(Keys.BACKSPACE)
         children_input.send_keys('3')
-        sleep(0.5)
+        sleep(1)
 
         #habitaciones
         rooms_input = browser.find_element_by_id('rooms-input')
         rooms_input.send_keys(Keys.BACKSPACE)
         rooms_input.send_keys('2')
-        sleep(0.5)
+        sleep(1)
 
         #edad de los niños
         childs = 3
@@ -204,11 +212,50 @@ def search_trivago(city, checkin, checkout, adults, children, babies):
             dropdown.select_by_value('4')
         guest_button = browser.find_element_by_class_name('btn--apply-config')
         browser.execute_script('arguments[0].click();', guest_button)
-        sleep(0.5)
-        search(browser)
+        sleep(2)
+        _search(browser)
 
+    resultados=wait.until(
+    EC.presence_of_element_located(
+        (By.CLASS_NAME, 'hotel-item')
+        )
+    )
 
+    contador=1
+    #print("Primera oferta")
+    precio=[]
+    services = []
+    resultados=browser.find_elements_by_class_name('hotel-item')
+    for resultado in resultados:
+        #print(resultado.get_attribute("id"))
+        #print(resultado.get_attribute("class"))
+        if resultado.get_attribute("class")!='carousel-list__item js_co_item hotel-item':
+            #pprint(resultado)
+            print("Oferta numero ", contador)
+            contador+=1
+            nombre = resultado.find_element_by_class_name('name__copytext')
+            print("Nombre de la oferta: " + nombre.text)
 
-##babies 1 AÑO
-##NIÑOS 10 años
-## ADULTOS > 13 
+            precio = resultado.find_element_by_css_selector("strong[class*='accommodation-list__price--']")
+            print("Precio por noche: " + precio.text)
+
+            precio_total =resultado.find_element_by_css_selector("span[class*='accommodation-list__pricePerStay--']")
+            print("Precio por noche: " + precio_total.text)
+
+            #id_oferta = resultado.get_attribute("id")
+            #print(id_oferta)
+            #try:
+            #    precio_total = resultado.find_element_by_xpath('//*[@id="{}"]/div/article/div[1]/div[2]/section/div[2]/article/div/div[2]/div/em/span'.format(id_oferta))
+            #except:
+            #    precio_total = resultado.find_element_by_xpath('//*[@id="{}"]/div/article/div[1]/div[2]/section/div[2]/article/div/p/em/span'.format(id_oferta))
+            #print("Precio total: " + precio_total.text)
+
+            categoria= resultado.find_element_by_class_name('accommodation-type')
+            print("Categoria: " + categoria.text)
+            
+            id_oferta = resultado.get_attribute("id")
+            calificacion = resultado.find_element_by_xpath('//*[@id="{}"]/div/article/div[1]/div[2]/div/div/button/span[1]/span[1]/span'.format(id_oferta))
+            print(f'Rating: {calificacion.text} ')
+            sleep(3)
+        print("\n")
+
